@@ -53,16 +53,31 @@ def main():
     output_file = "results.json"
     json_results = {}
     for date, result in results.items():
+        trades_serializable = []
+        for trade in result['trades']:
+            trade_dict = {
+                'symbol': str(trade['symbol']),
+                'type': str(trade['type']),
+                'entry_price': float(trade['entry_price']),
+                'exit_price': float(trade['exit_price']),
+                'size': float(trade['size']),
+                'pnl': float(trade['pnl']),
+                'entry_time': int(trade['entry_time']),
+                'exit_time': int(trade['exit_time']),
+                'balance_after': float(trade['balance_after'])
+            }
+            trades_serializable.append(trade_dict)
+        
         json_results[date] = {
-            'final_balance': result['final_balance'],
+            'final_balance': float(result['final_balance']),
             'initial_balance': 10000.0,
-            'total_return_pct': (result['final_balance'] / 10000 - 1) * 100,
+            'total_return_pct': float((result['final_balance'] / 10000 - 1) * 100),
             'tp_sl_percent': result['tp_sl_percent'],
             'leverage': result['leverage'],
-            'position_allocation': result.get('position_allocation') or 0.9,
-            'achieved_target': result['achieved_target'],
-            'num_trades': len(result['trades']),
-            'trades': result['trades']
+            'position_allocation': float(result.get('position_allocation') or 0.9),
+            'achieved_target': bool(result['achieved_target']),
+            'num_trades': int(len(result['trades'])),
+            'trades': trades_serializable
         }
     
     with open(output_file, 'w') as f:

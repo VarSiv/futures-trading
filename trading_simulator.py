@@ -361,7 +361,7 @@ class OptimalStrategyFinder:
         allocations = [0.99, 0.95, 0.9, 0.8, 0.7, 0.5]
         
         tested = 0
-        max_tests = 100
+        max_tests = 250
         
         for leverage in leverages:
             if tested >= max_tests:
@@ -374,7 +374,7 @@ class OptimalStrategyFinder:
                 if tested >= max_tests:
                     break
                     
-                for allocation in allocations[:2]:
+                for allocation in allocations[:3]:
                     tested += 1
                     
                     try:
@@ -385,7 +385,9 @@ class OptimalStrategyFinder:
                             allocation
                         )
                         
-                        if final_balance > best_result['final_balance']:
+                        # Update best_result if balance is better OR if we haven't set parameters yet
+                        if (final_balance > best_result['final_balance'] or 
+                            best_result['tp_sl_percent'] is None):
                             best_result['final_balance'] = final_balance
                             best_result['tp_sl_percent'] = tp_sl_percent
                             best_result['leverage'] = leverage
@@ -404,7 +406,7 @@ class OptimalStrategyFinder:
                     except Exception:
                         continue
             
-            if best_balance_for_leverage < best_result['final_balance'] * 0.5:
+            if best_balance_for_leverage < best_result['final_balance'] * 0.3:
                 break
         
         if best_result['tp_sl_percent'] and best_result['leverage']:
@@ -413,6 +415,8 @@ class OptimalStrategyFinder:
                 if allocation == best_result['position_allocation']:
                     continue
                 tested += 1
+                if tested >= max_tests:
+                    break
                 try:
                     final_balance, trades = self.simulate_day(
                         date_str,
@@ -421,6 +425,7 @@ class OptimalStrategyFinder:
                         allocation
                     )
                     
+                    # Update if balance is better (should always be >= since we're refining)
                     if final_balance > best_result['final_balance']:
                         best_result['final_balance'] = final_balance
                         best_result['position_allocation'] = allocation
@@ -431,6 +436,41 @@ class OptimalStrategyFinder:
                             break
                 except Exception:
                     continue
+        
+        if best_result['tp_sl_percent'] and best_result['leverage'] and not best_result['achieved_target']:
+            print(f"  Deep search on best leverage {best_result['leverage']}x...", end='\r')
+            best_leverage = best_result['leverage']
+            for tp_sl_percent in tp_sl_percents:
+                if tested >= max_tests:
+                    break
+                for allocation in allocations:
+                    if tested >= max_tests:
+                        break
+                    if (tp_sl_percent == best_result['tp_sl_percent'] and 
+                        allocation == best_result['position_allocation']):
+                        continue
+                    tested += 1
+                    try:
+                        final_balance, trades = self.simulate_day(
+                            date_str,
+                            tp_sl_percent,
+                            best_leverage,
+                            allocation
+                        )
+                        
+                        # Update if balance is better
+                        if final_balance > best_result['final_balance']:
+                            best_result['final_balance'] = final_balance
+                            best_result['tp_sl_percent'] = tp_sl_percent
+                            best_result['position_allocation'] = allocation
+                            best_result['trades'] = trades
+                            best_result['achieved_target'] = final_balance >= target_balance
+                            
+                            if best_result['achieved_target']:
+                                print(f"  Target achieved after {tested} tests!")
+                                return best_result
+                    except Exception:
+                        continue
         
         print(f"  Completed {tested} tests (greedy optimization).")
         return best_result
