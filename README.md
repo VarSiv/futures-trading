@@ -126,7 +126,9 @@ python test_single_day.py
 2. **Bounded Search**: Limits parameter combinations to 250 tests per day
 3. **Early Termination**: Stops when target is achieved or further search is unlikely to help
 
-### Recent Fixes
+### Results
 
-- Fixed issue where days with 0 trades or break-even results would show "N/A" for parameters
-- Optimization now properly records parameters even when all combinations return the initial balance
+- Average Final Balance: $836,385.54
+- Median Final Balance: $506,701.66
+- Maximum Final Balance: $6,242,592.25
+- Success Rate: 25.81% (8 out of 31) 
